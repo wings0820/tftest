@@ -81,8 +81,8 @@ def time_tensorflow_run(session,target,feed,info_string):
         if i>=num_steps_burn_in:
             if not i%10:
                 print('%s : step %d,duration = %.3f'% (datetime.now(),i-num_steps_burn_in,duration))
-            total_duration = total_duration + duration
-            total_duration_squard += total_duration*total_duration
+            total_duration += duration
+            total_duration_squard += duration*duration
     mn = total_duration/num_batches
     vr = total_duration_squard / num_batches - mn*mn
     sd = math.sqrt(vr)
@@ -101,7 +101,7 @@ def run_benchmark():
 
         time_tensorflow_run(sess,predictions,{keep_prob:0.5},"Forward")
         objective = tf.nn.l2_loss(fc8)
-        grad = tf.tf.gradients(objective,p)
+        grad = tf.gradients(objective,p)
         time_tensorflow_run(sess,grad,{keep_prob:0.5},"Forward-backward")
 
 batch_size = 32
