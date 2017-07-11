@@ -214,4 +214,39 @@ def inception_v3(inputs,num_classes = 1000,is_training =True,dropout_keep_prob =
         with slim.arg_scope([slim.batch_norm,slim.dropout],is_training = is_training):
             net,end_points = inception_v3_base(inputs,scope = scope)
 
-        with slim.arg_scope()
+        with slim.arg_scope([slim.conv2d,slim.max_pool2d,slim.avg_pool2d],stride = 1,padding = 'SAME'):
+            aux_logits =end_points['Mixed_6e']
+            with tf.variable_scope('AuxLogits'):
+                aux_logits = slim.avg_pool2d(aux_logits,[5,5],stride = 3,padding = 'VALID',scope = 'AvgPool_3a_5x5')
+                aux_logits = slim.conv2d(aux_logits,128,[1,1],scope = 'Conv2d_1b_1x1')
+
+                aux_logits = slim.conv2d(aux_logits,768,[5,5],weights_initializer = trunc_normal(0.01),padding = 'VALID',scope ='Conv2d_2a_5x5')
+                aux_logits = slim.conv2d(aux_logits,num_classes,[1,1],activation_fn =None,normalizer_fn=None,weights_initializer=trunc_normal(0.001),scope='Conv2d2b_1x1')
+            if spatial_squeeze:
+                aux_logits = tf.squeeze(aux_logits,[1,2],name='SpatialSqueeze')
+            end_points['AuxLogits'] = aux_logits
+
+    with tf.variable_scope('Logits'):
+        net = slim.avg_pool2d(net,[8,8],padding ='VALID',scope ='AvgPool_1a_8x8')
+        net = slim.dropout(net,keep_prob =dropout_keep_prob,scope ='Dropout_1b')
+        end_points['prediction_fn'] = net
+        Logits = slim.conv2d(net,num_classes,[1,1],activation_fn = None,normalizer_fn=None,scope ='Conv2d_1c_1x1')
+
+        if spatial_squeeze:
+            Logits = tf.squeeze:
+            Logits = tf.squeeze(Logits,[1,2],name = 'SpatialSqueeze')
+        end_points['Logits']= Logits
+        end_points['prediction_fn'] = prediction_fn(Logits,scope ='Predictions')
+    return logits,end_points
+
+batch_size = 32
+height,width =299,299
+inputs = tf.random_uniform((batch_size,height,width,3))
+with slim.arg_scope(inception_v3_arg_scope()):
+    logits,end_points = inception_v3(inputs,is_training=False)
+
+init = tf.global_variables_initializer()
+sess = tf.Session
+sess.run(init)
+num_batches = 100
+time_tensorflow_run(sess,logits,"Forward")
