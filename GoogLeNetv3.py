@@ -1,9 +1,32 @@
 import tensorflow as tf
+from datetime import datetime
+import math
+import time
+
 slim = tf.contrib.slim
 trunc_normal = lambda stddev: tf.truncatemod_normal_initializer(0.0,stddev)
 
- def inception_v3_arg_scope(weight_decay = 0.00004,stddev = 0.1,batch_norm_var_collection = 'moving_vars'):
-     batch_norm_params = {
+
+def time_tensorflow_run(session,target,feed,{keep_prob:0.5},info_string):
+    num_steps_burn_in = 10
+    total_duration = 0.0
+    total_duration_squard = 0.0
+    for i in range(num_steps_burn_in + num_batches):
+        start_time = time.time()
+        _=session.run(target,feed_dict = feed)
+        duration = time.time()-start_time
+        if i>=num_steps_burn_in:
+            if not i%10:
+                print('%s : step %d,duration = %.3f'% (datetime.now(),i-num_steps_burn_in,duration))
+            total_duration += duration
+            total_duration_squard += duration*duration
+    mn = total_duration/num_batches
+    vr = total_duration_squard / num_batches - mn*mn
+    sd = math.sqrt(vr)
+    print ('%s: %s across %d steps,%.3f+/- %.3f sec / batch' % (datetime.now(),info_string,num_batches,mn,sd))
+
+def inception_v3_arg_scope(weight_decay = 0.00004,stddev = 0.1,batch_norm_var_collection = 'moving_vars'):
+    batch_norm_params = {
          'decay' : 0.9997,
          'epsilon' : 0.001,
          'updates_collections' : tf.GraphKeys.UPDATE_OPS,
@@ -21,7 +44,7 @@ trunc_normal = lambda stddev: tf.truncatemod_normal_initializer(0.0,stddev)
             activation_fn = tf.nn.relu,
             normalizer_fn = slim.batch_norm,
             normalizer_params = batch_norm_params) as sc:
-        return sc
+            return sc
 
 def inception_v3_base(inputs,scope = None):
     end_points = {}
@@ -215,7 +238,7 @@ def inception_v3(inputs,num_classes = 1000,is_training =True,dropout_keep_prob =
             net,end_points = inception_v3_base(inputs,scope = scope)
 
         with slim.arg_scope([slim.conv2d,slim.max_pool2d,slim.avg_pool2d],stride = 1,padding = 'SAME'):
-            aux_logits =end_points['Mixed_6e']
+            aux_logits = end_points['Mixed_6e']
             with tf.variable_scope('AuxLogits'):
                 aux_logits = slim.avg_pool2d(aux_logits,[5,5],stride = 3,padding = 'VALID',scope = 'AvgPool_3a_5x5')
                 aux_logits = slim.conv2d(aux_logits,128,[1,1],scope = 'Conv2d_1b_1x1')
@@ -233,7 +256,6 @@ def inception_v3(inputs,num_classes = 1000,is_training =True,dropout_keep_prob =
         Logits = slim.conv2d(net,num_classes,[1,1],activation_fn = None,normalizer_fn=None,scope ='Conv2d_1c_1x1')
 
         if spatial_squeeze:
-            Logits = tf.squeeze:
             Logits = tf.squeeze(Logits,[1,2],name = 'SpatialSqueeze')
         end_points['Logits']= Logits
         end_points['prediction_fn'] = prediction_fn(Logits,scope ='Predictions')
@@ -246,7 +268,7 @@ with slim.arg_scope(inception_v3_arg_scope()):
     logits,end_points = inception_v3(inputs,is_training=False)
 
 init = tf.global_variables_initializer()
-sess = tf.Session
+sess = tf.Session()
 sess.run(init)
 num_batches = 100
 time_tensorflow_run(sess,logits,"Forward")
