@@ -69,7 +69,7 @@ def bottleneck(inputs,depth,depth_bottleneck,stride,outputs_collections = None,s
 
 def resnet_v2(inputs,blocks,num_classes = None,global_pool = True,include_root_block = True,reuse = None,scope = None):
     with tf.variable_scope(scope,'resnet_v2',[inputs],reuse = reuse) as sc:
-        end_points_collection = sc.original_name_scope + 'end_points_collection'
+        end_points_collection = sc.original_name_scope + '_points_collection'
         with slim.arg_scope([slim.conv2d,bottleneck,stack_blocks_dense],outputs_collections = end_points_collection):
             net = inputs
             if include_root_block:
